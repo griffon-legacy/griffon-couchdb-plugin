@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2011 the original author or authors.
+ * Copyright 2010-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License")
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package griffon.plugins.couchdb
 
 import griffon.core.GriffonApplication
@@ -36,31 +37,18 @@ import org.svenson.converter.DefaultTypeConverterRepository
  * @author Andres Almiray
  */
 @Singleton
-final class CouchdbConnector {
+final class CouchdbConnector implements CouchdbProvider {
     private bootstrap
 
-    static void enhance(MetaClass mc) {
-        mc.withCouchdb = {String databaseName, Closure closure ->
-            DatabaseHolder.instance.withCouchdb(databaseName, closure)
-        }
-        mc.withCouchdb << {Closure closure ->
-            DatabaseHolder.instance.withCouchdb('default', closure)
-        }
-        mc.withCouchdb << {String databaseName, CallableWithArgs callable ->
-            DatabaseHolder.instance.withCouchdb(databaseName, callable)
-        }
-        mc.withCouchdb << {CallableWithArgs callable ->
-            DatabaseHolder.instance.withCouchdb('default', callable)
-        }
-    }
-
-    Object withCouchdb(String databaseName, Closure closure) {
+    Object withCouchdb(String databaseName = 'default', Closure closure) {
         return DatabaseHolder.instance.withCouchdb(databaseName, closure)
     }
     
-    public <T> T withCouchdb(String databaseName, CallableWithArgs<T> callable) {
+    public <T> T withCouchdb(String databaseName = 'default', CallableWithArgs<T> callable) {
         return DatabaseHolder.instance.withCouchdb(databaseName, callable)
     }
+
+    // ======================================================
 
     ConfigObject createConfig(GriffonApplication app) {
         def couchconfigClass = app.class.classLoader.loadClass('CouchdbConfig')
@@ -71,12 +59,11 @@ final class CouchdbConnector {
         return databaseName == 'default' ? config.database : config.databases[databaseName]
     }
     
-    Database connect(GriffonApplication app, String databaseName = 'default') {
+    Database connect(GriffonApplication app, ConfigObject config, String databaseName = 'default') {
         if(DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
             return DatabaseHolder.instance.getDatabase(databaseName)
         }
         
-        ConfigObject config = createConfig(app)
         config = narrowConfig(config, databaseName)
         app.event('CouchdbConnectStart', [config, databaseName])
         Database db = createDatabase(app, config, databaseName)
@@ -88,9 +75,9 @@ final class CouchdbConnector {
         db
     }
     
-    void disconnect(GriffonApplication app, String databaseName = 'default') {
+    void disconnect(GriffonApplication app,  ConfigObject config, String databaseName = 'default') {
         if(DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
-            ConfigObject config = narrowConfig(createConfig(app), databaseName)
+            config = narrowConfig(config, databaseName)
             Database db = DatabaseHolder.instance.getDatabase(databaseName)
             app.event('CouchdbDisconnectStart', [config, databaseName, db])
             bootstrap.destroy(db, databaseName)

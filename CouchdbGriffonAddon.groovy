@@ -14,26 +14,33 @@
  * limitations under the License.
  */
 
+import griffon.core.GriffonClass
 import griffon.core.GriffonApplication
 import griffon.plugins.couchdb.CouchdbConnector
+import griffon.plugins.couchdb.CouchdbEnhancer
 
 /**
  * @author Andres Almiray
  */
 class CouchdbGriffonAddon {
     void addonInit(GriffonApplication app) {
-        CouchdbConnector.instance.connect(app)
+        ConfigObject config = CouchdbConnector.instance.createConfig(app)
+        CouchdbConnector.instance.connect(app, config)
+    }
+
+    void addonPostInit(GriffonApplication app) {
+        def types = app.config.griffon?.couchdb?.injectInto ?: ['controller']
+        for(String type : types) {
+            for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
+                CouchdbEnhancer.enhance(gc.metaClass)
+            }
+        }
     }
 
     def events = [
         ShutdownStart: { app ->
-            CouchdbConnector.instance.disconnect(app)
-        },
-        NewInstance: { klass, type, instance ->
-            def types = app.config.griffon?.couchdb?.injectInto ?: ['controller']
-            if(!types.contains(type)) return
-            def mc = app.artifactManager.findGriffonClass(klass).metaClass
-            CouchdbConnector.enhance(mc)
+            ConfigObject config = CouchdbConnector.instance.createConfig(app)
+            CouchdbConnector.instance.disconnect(app, config)
         }
     ]
 }

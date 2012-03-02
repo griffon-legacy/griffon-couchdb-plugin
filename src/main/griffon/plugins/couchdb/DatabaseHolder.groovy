@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2011 the original author or authors.
+ * Copyright 2010-2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,20 +28,18 @@ import org.slf4j.LoggerFactory
  * @author Andres Almiray
  */
 @Singleton
-class DatabaseHolder {
+class DatabaseHolder implements CouchdbProvider {
     private static final Logger LOG = LoggerFactory.getLogger(DatabaseHolder)
     private static final Object[] LOCK = new Object[0]
     private final Map<String, Database> databases = [:]
 
-    Object withCouchdb(String databaseName, Closure closure) {
-        if(isBlank(databaseName)) databaseName = 'default'
+    Object withCouchdb(String databaseName = 'default', Closure closure) {
         Database db = fetchDatabase(databaseName)
         if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
         return closure(databaseName, db)
     }
     
-    public <T> T withCouchdb(String databaseName, CallableWithArgs<T> callable) {
-        if(isBlank(databaseName)) databaseName = 'default'
+    public <T> T withCouchdb(String databaseName = 'default', CallableWithArgs<T> callable) {
         Database db = fetchDatabase(databaseName)
         if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
         callable.args = [databaseName, db] as Object[]
