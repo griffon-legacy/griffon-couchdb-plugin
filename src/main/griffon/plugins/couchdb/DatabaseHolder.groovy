@@ -38,7 +38,7 @@ class DatabaseHolder implements CouchdbProvider {
         if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
         return closure(databaseName, db)
     }
-    
+
     public <T> T withCouchdb(String databaseName = 'default', CallableWithArgs<T> callable) {
         Database db = fetchDatabase(databaseName)
         if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
@@ -58,7 +58,7 @@ class DatabaseHolder implements CouchdbProvider {
 
     void setDatabase(String databaseName = 'default', Database db) {
         if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, db)       
+        storeDatabase(databaseName, db)
     }
     
     boolean isDatabaseConnected(String databaseName) {
@@ -68,7 +68,7 @@ class DatabaseHolder implements CouchdbProvider {
     
     void disconnectDatabase(String databaseName) {
         if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, null)        
+        storeDatabase(databaseName, null)
     }
 
     private Database fetchDatabase(String databaseName) {

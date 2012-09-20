@@ -19,6 +19,7 @@ package griffon.plugins.couchdb
 import griffon.core.GriffonApplication
 import griffon.util.Environment
 import griffon.util.CallableWithArgs
+import griffon.util.ConfigUtils
 
 import org.apache.commons.lang.StringUtils
 import org.apache.http.auth.AuthScope
@@ -51,11 +52,10 @@ final class CouchdbConnector implements CouchdbProvider {
     // ======================================================
 
     ConfigObject createConfig(GriffonApplication app) {
-        def couchconfigClass = app.class.classLoader.loadClass('CouchdbConfig')
-        return new ConfigSlurper(Environment.current.name).parse(couchconfigClass)
+        ConfigUtils.loadConfigWithI18n('CouchdbConfig')
     }
 
-    private ConfigObject narrowConfig(ConfigObject config, String databaseName) {   
+    private ConfigObject narrowConfig(ConfigObject config, String databaseName) {
         return databaseName == 'default' ? config.database : config.databases[databaseName]
     }
     
@@ -63,7 +63,7 @@ final class CouchdbConnector implements CouchdbProvider {
         if(DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
             return DatabaseHolder.instance.getDatabase(databaseName)
         }
-        
+
         config = narrowConfig(config, databaseName)
         app.event('CouchdbConnectStart', [config, databaseName])
         Database db = createDatabase(app, config, databaseName)

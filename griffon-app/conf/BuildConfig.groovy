@@ -10,7 +10,7 @@ griffon.project.dependency.resolution = {
     }
     dependencies {
         compile('com.google.code.jcouchdb:jcouchdb:1.0.1-1') { excludes 'commons-logging' }
-        compile("org.springframework:org.springframework.core:3.0.5.RELEASE") { transitive = false }
+        compile("org.springframework:org.springframework.core:$springVersion") { transitive = false }
         compile('net.sf.ezmorph:ezmorph:1.0.6') { excludes 'junit' }
     }
 }

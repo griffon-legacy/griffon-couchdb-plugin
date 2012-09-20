@@ -27,7 +27,7 @@ final class CouchdbEnhancer {
     private static final Logger LOG = LoggerFactory.getLogger(CouchdbEnhancer)
 
     private CouchdbEnhancer() {}
-    
+
     static void enhance(MetaClass mc, CouchdbProvider provider = DatabaseHolder.instance) {
         if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withCouchdb = {Closure closure ->
