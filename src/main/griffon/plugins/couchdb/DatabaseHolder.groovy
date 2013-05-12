@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2011-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,71 +17,69 @@
 package griffon.plugins.couchdb
 
 import org.jcouchdb.db.Database
-import griffon.util.CallableWithArgs
+
+import griffon.core.GriffonApplication
 import griffon.util.ApplicationHolder
 import static griffon.util.GriffonNameUtils.isBlank
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * @author Andres Almiray
  */
-@Singleton
-class DatabaseHolder implements CouchdbProvider {
-    private static final Logger LOG = LoggerFactory.getLogger(DatabaseHolder)
+class DatabaseHolder {
+    private static final String DEFAULT = 'default'
     private static final Object[] LOCK = new Object[0]
     private final Map<String, Database> databases = [:]
 
-    Object withCouchdb(String databaseName = 'default', Closure closure) {
-        Database db = fetchDatabase(databaseName)
-        if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
-        return closure(databaseName, db)
+    private static final DatabaseHolder INSTANCE
+
+    static {
+        INSTANCE = new DatabaseHolder()
     }
 
-    public <T> T withCouchdb(String databaseName = 'default', CallableWithArgs<T> callable) {
-        Database db = fetchDatabase(databaseName)
-        if(LOG.debugEnabled) LOG.debug("Executing Couchdb statements on datasource '$databaseName'")
-        callable.args = [databaseName, db] as Object[]
-        return callable.run()
+    static DatabaseHolder getInstance() {
+        INSTANCE
     }
+
+    private DatabaseHolder() {}
 
     String[] getDatabaseNames() {
         List<String> databaseNames = new ArrayList().addAll(databases.keySet())
         databaseNames.toArray(new String[databaseNames.size()])
     }
 
-    Database getDatabase(String databaseName = 'default') {
-        if(isBlank(databaseName)) databaseName = 'default'
+    Database getDatabase(String databaseName = DEFAULT) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
         retrieveDatabase(databaseName)
     }
 
-    void setDatabase(String databaseName = 'default', Database db) {
-        if(isBlank(databaseName)) databaseName = 'default'
-        storeDatabase(databaseName, db)
+    void setDatabase(String databaseName = DEFAULT, Database database) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
+        storeDatabase(databaseName, database)
     }
-    
+
     boolean isDatabaseConnected(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
+        if (isBlank(databaseName)) databaseName = DEFAULT
         retrieveDatabase(databaseName) != null
     }
     
     void disconnectDatabase(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
+        if (isBlank(databaseName)) databaseName = DEFAULT
         storeDatabase(databaseName, null)
     }
 
-    private Database fetchDatabase(String databaseName) {
-        if(isBlank(databaseName)) databaseName = 'default'
-        Database db = retrieveDatabase(databaseName)
-        if(db == null) {
-            db = CouchdbConnector.instance.connect(ApplicationHolder.application, databaseName)
+    Database fetchDatabase(String databaseName) {
+        if (isBlank(databaseName)) databaseName = DEFAULT
+        Database database = retrieveDatabase(databaseName)
+        if (database == null) {
+            GriffonApplication app = ApplicationHolder.application
+            ConfigObject config = CouchdbConnector.instance.createConfig(app)
+            database = CouchdbConnector.instance.connect(app, config, databaseName)
         }
-        
-        if(db == null) {
+
+        if (database == null) {
             throw new IllegalArgumentException("No such couchdb database configuration for name $databaseName")
         }
-        db
+        database
     }
 
     private Database retrieveDatabase(String databaseName) {
@@ -90,9 +88,9 @@ class DatabaseHolder implements CouchdbProvider {
         }
     }
 
-    private void storeDatabase(String databaseName, Database db) {
+    private void storeDatabase(String databaseName, Database database) {
         synchronized(LOCK) {
-            databases[databaseName] = db
+            databases[databaseName] = database
         }
     }
 }

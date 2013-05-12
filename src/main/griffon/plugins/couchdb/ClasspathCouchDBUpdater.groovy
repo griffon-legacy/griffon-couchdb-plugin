@@ -35,10 +35,10 @@ class ClasspathCouchDBUpdater extends AbstractCouchDBUpdater {
 
             boolean isMapFunction = path.endsWith(MAP_SUFFIX)
             boolean isReduceFunction = path.endsWith(REDUCE_SUFFIX)
-            if(isMapFunction || isReduceFunction)
+            if (isMapFunction || isReduceFunction)
             {
                 String content = viewURL.text
-                if(content) createViewFor(path, content, designDocuments, File.separator)
+                if (content) createViewFor(path, content, designDocuments, File.separator)
             }
         }
 

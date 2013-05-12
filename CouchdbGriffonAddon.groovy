@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2011-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,26 +18,32 @@ import griffon.core.GriffonClass
 import griffon.core.GriffonApplication
 import griffon.plugins.couchdb.CouchdbConnector
 import griffon.plugins.couchdb.CouchdbEnhancer
+import griffon.plugins.couchdb.CouchdbContributionHandler
+
+import static griffon.util.ConfigUtils.getConfigValueAsBoolean
 
 /**
  * @author Andres Almiray
  */
 class CouchdbGriffonAddon {
-    void addonInit(GriffonApplication app) {
-        ConfigObject config = CouchdbConnector.instance.createConfig(app)
-        CouchdbConnector.instance.connect(app, config)
-    }
-
     void addonPostInit(GriffonApplication app) {
+        CouchdbConnector.instance.createConfig(app)
         def types = app.config.griffon?.couchdb?.injectInto ?: ['controller']
-        for(String type : types) {
-            for(GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
+        for (String type : types) {
+            for (GriffonClass gc : app.artifactManager.getClassesOfType(type)) {
+                if (CouchdbContributionHandler.isAssignableFrom(gc.clazz)) continue
                 CouchdbEnhancer.enhance(gc.metaClass)
             }
         }
     }
 
     Map events = [
+        LoadAddonsEnd: { app, addons ->
+            if (getConfigValueAsBoolean(app.config, 'griffon.couchdb.connect.onstartup', true)) {
+                ConfigObject config = CouchdbConnector.instance.createConfig(app)
+                CouchdbConnector.instance.connect(app, config)
+            }
+        },
         ShutdownStart: { app ->
             ConfigObject config = CouchdbConnector.instance.createConfig(app)
             CouchdbConnector.instance.disconnect(app, config)

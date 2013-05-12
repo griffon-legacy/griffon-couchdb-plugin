@@ -22,7 +22,11 @@ import groovy.lang.Closure;
 /**
  * @author Andres Almiray
  */
-public interface CouchdbProvider {
+public interface CouchdbContributionHandler {
+    void setCouchdbProvider(CouchdbProvider provider);
+
+    CouchdbProvider getCouchdbProvider();
+
     <R> R withCouchdb(Closure<R> closure);
 
     <R> R withCouchdb(String databaseName, Closure<R> closure);

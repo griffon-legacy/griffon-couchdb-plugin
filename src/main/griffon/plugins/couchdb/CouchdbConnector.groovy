@@ -1,7 +1,7 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2011-2013 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License")
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -17,11 +17,12 @@
 package griffon.plugins.couchdb
 
 import griffon.core.GriffonApplication
-import griffon.util.Environment
-import griffon.util.CallableWithArgs
+import griffon.util.GriffonNameUtils
 import griffon.util.ConfigUtils
 
-import org.apache.commons.lang.StringUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.codehaus.griffon.couchdb.json.JsonConverterUtils
@@ -33,60 +34,70 @@ import org.svenson.JSONParser
 import org.svenson.converter.DefaultTypeConverterRepository
 
 /**
- * Contains code from grails-couchdb 
- *
  * @author Andres Almiray
  */
 @Singleton
-final class CouchdbConnector implements CouchdbProvider {
+final class CouchdbConnector {
+    private static final String DEFAULT = 'default'
+    private static final Logger LOG = LoggerFactory.getLogger(CouchdbConnector)
     private bootstrap
 
-    Object withCouchdb(String databaseName = 'default', Closure closure) {
-        return DatabaseHolder.instance.withCouchdb(databaseName, closure)
-    }
-    
-    public <T> T withCouchdb(String databaseName = 'default', CallableWithArgs<T> callable) {
-        return DatabaseHolder.instance.withCouchdb(databaseName, callable)
-    }
-
-    // ======================================================
-
     ConfigObject createConfig(GriffonApplication app) {
-        ConfigUtils.loadConfigWithI18n('CouchdbConfig')
+        if (!app.config.pluginConfig.couchdb) {
+            app.config.pluginConfig.couchdb = ConfigUtils.loadConfigWithI18n('CouchdbConfig')
+        }
+        app.config.pluginConfig.couchdb
     }
 
     private ConfigObject narrowConfig(ConfigObject config, String databaseName) {
-        return databaseName == 'default' ? config.database : config.databases[databaseName]
+        if (config.containsKey('database') && databaseName == DEFAULT) {
+            return config.database
+        } else if (config.containsKey('databases')) {
+            return config.databases[databaseName]
+        }
+        return config
     }
-    
-    Database connect(GriffonApplication app, ConfigObject config, String databaseName = 'default') {
-        if(DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
+
+    Database connect(GriffonApplication app, ConfigObject config, String databaseName = DEFAULT) {
+        if (DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
             return DatabaseHolder.instance.getDatabase(databaseName)
         }
 
         config = narrowConfig(config, databaseName)
         app.event('CouchdbConnectStart', [config, databaseName])
-        Database db = createDatabase(app, config, databaseName)
-        DatabaseHolder.instance.setDatabase(databaseName, db)
+        Database database = startCouchdb(app, config, databaseName)
+        DatabaseHolder.instance.setDatabase(databaseName, database)
         bootstrap = app.class.classLoader.loadClass('BootstrapCouchdb').newInstance()
         bootstrap.metaClass.app = app
-        bootstrap.init(db, databaseName)
-        app.event('CouchdbConnectEnd', [databaseName, db])
-        db
+        resolveCouchdbProvider(app).withCouchdb { dn, d -> bootstrap.init(dn, d) }
+        app.event('CouchdbConnectEnd', [databaseName, database])
+        database
     }
-    
-    void disconnect(GriffonApplication app,  ConfigObject config, String databaseName = 'default') {
-        if(DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
+
+    void disconnect(GriffonApplication app, ConfigObject config, String databaseName = DEFAULT) {
+        if (DatabaseHolder.instance.isDatabaseConnected(databaseName)) {
             config = narrowConfig(config, databaseName)
-            Database db = DatabaseHolder.instance.getDatabase(databaseName)
-            app.event('CouchdbDisconnectStart', [config, databaseName, db])
-            bootstrap.destroy(db, databaseName)
-            app.event('CouchdbDisconnectEnd', [databaseName])
+            Database database = DatabaseHolder.instance.getDatabase(databaseName)
+            app.event('CouchdbDisconnectStart', [config, databaseName, database])
+            resolveCouchdbProvider(app).withCouchdb { dn, d -> bootstrap.destroy(dn, d) }
+            app.event('CouchdbDisconnectEnd', [config, databaseName])
             DatabaseHolder.instance.disconnectDatabase(databaseName)
         }
     }
 
-    private Database createDatabase(GriffonApplication app, ConfigObject config, String databaseName) {
+    CouchdbProvider resolveCouchdbProvider(GriffonApplication app) {
+        def couchdbProvider = app.config.couchdbProvider
+        if (couchdbProvider instanceof Class) {
+            couchdbProvider = couchdbProvider.newInstance()
+            app.config.couchdbProvider = couchdbProvider
+        } else if (!couchdbProvider) {
+            couchdbProvider = DefaultCouchdbProvider.instance
+            app.config.couchdbProvider = couchdbProvider
+        }
+        couchdbProvider
+    }
+
+    private Database startCouchdb(GriffonApplication app, ConfigObject config, String databaseName) {
         String host = config?.host ?: 'localhost'
         Integer port = config?.port ?: 5984
         String database = config?.datastore ?: app.metadata['app.name']
@@ -99,12 +110,12 @@ final class CouchdbConnector implements CouchdbProvider {
         Database db = new Database(host, port, database)
 
         // check to see if there are any user credentials and set them
-        if (StringUtils.isNotEmpty(username)) {
+        if (!GriffonNameUtils.isBlank(username)) {
             def credentials = new UsernamePasswordCredentials(username, password)
             def authScope = new AuthScope(host, port)
 
             // set the realm and scheme if they are set
-            if (StringUtils.isNotEmpty(realm) || StringUtils.isNotEmpty(scheme)) {
+            if (!GriffonNameUtils.isBlank(realm) || !GriffonNameUtils.isBlank(scheme)) {
                 authScope = new AuthScope(host, port, realm, scheme)
             }
 

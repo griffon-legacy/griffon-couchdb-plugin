@@ -16,18 +16,26 @@
 
 package griffon.plugins.couchdb;
 
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
+import org.jcouchdb.db.Database;
 
 /**
  * @author Andres Almiray
  */
-public interface CouchdbProvider {
-    <R> R withCouchdb(Closure<R> closure);
+public class DefaultCouchdbProvider extends AbstractCouchdbProvider {
+    private static final DefaultCouchdbProvider INSTANCE;
 
-    <R> R withCouchdb(String databaseName, Closure<R> closure);
+    static {
+        INSTANCE = new DefaultCouchdbProvider();
+    }
 
-    <R> R withCouchdb(CallableWithArgs<R> callable);
+    public static DefaultCouchdbProvider getInstance() {
+        return INSTANCE;
+    }
 
-    <R> R withCouchdb(String databaseName, CallableWithArgs<R> callable);
+    private DefaultCouchdbProvider() {}
+
+    @Override
+    protected Database getDatabase(String databaseName) {
+        return DatabaseHolder.getInstance().fetchDatabase(databaseName);
+    }
 }

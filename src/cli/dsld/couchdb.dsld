@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-package griffon.plugins.couchdb;
-
-import griffon.util.CallableWithArgs;
-import groovy.lang.Closure;
+package dsld
 
 /**
  * @author Andres Almiray
  */
-public interface CouchdbProvider {
-    <R> R withCouchdb(Closure<R> closure);
 
-    <R> R withCouchdb(String databaseName, Closure<R> closure);
-
-    <R> R withCouchdb(CallableWithArgs<R> callable);
-
-    <R> R withCouchdb(String databaseName, CallableWithArgs<R> callable);
+contribute(enclosingClass(annotatedBy('griffon.plugins.couchdb.CouchdbAware'))) {
+    provider = "Couchdb DSL"
+    delegatesTo "griffon.plugins.couchdb.CouchdbContributionHandler"
 }

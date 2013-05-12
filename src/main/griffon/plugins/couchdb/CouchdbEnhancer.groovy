@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,20 +24,21 @@ import org.slf4j.LoggerFactory
  * @author Andres Almiray
  */
 final class CouchdbEnhancer {
+    private static final String DEFAULT = 'default'
     private static final Logger LOG = LoggerFactory.getLogger(CouchdbEnhancer)
 
     private CouchdbEnhancer() {}
-
-    static void enhance(MetaClass mc, CouchdbProvider provider = DatabaseHolder.instance) {
-        if(LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
+    
+    static void enhance(MetaClass mc, CouchdbProvider provider = DefaultCouchdbProvider.instance) {
+        if (LOG.debugEnabled) LOG.debug("Enhancing $mc with $provider")
         mc.withCouchdb = {Closure closure ->
-            provider.withCouchdb('default', closure)
+            provider.withCouchdb(DEFAULT, closure)
         }
         mc.withCouchdb << {String databaseName, Closure closure ->
             provider.withCouchdb(databaseName, closure)
         }
         mc.withCouchdb << {CallableWithArgs callable ->
-            provider.withCouchdb('default', callable)
+            provider.withCouchdb(DEFAULT, callable)
         }
         mc.withCouchdb << {String databaseName, CallableWithArgs callable ->
             provider.withCouchdb(databaseName, callable)

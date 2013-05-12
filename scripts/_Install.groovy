@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2012 the original author or authors.
+ * Copyright 2010-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ ant.mkdir(dir:"${basedir}/griffon-app/resources/couchdb/views")
 argsMap = argsMap ?: [:]
 argsMap.skipPackagePrompt = true
 
-if(!new File("${basedir}/griffon-app/conf/CouchdbConfig.groovy").exists()) {
+if (!new File("${basedir}/griffon-app/conf/CouchdbConfig.groovy").exists()) {
    createArtifact(
       name: "CouchdbConfig",
       suffix: "",
@@ -33,7 +33,7 @@ if(!new File("${basedir}/griffon-app/conf/CouchdbConfig.groovy").exists()) {
       path: "griffon-app/conf")
 }
 
-if(!new File("${basedir}/griffon-app/conf/BootstrapCouchdb.groovy").exists()) {
+if (!new File("${basedir}/griffon-app/conf/BootstrapCouchdb.groovy").exists()) {
    createArtifact(
       name: "BootstrapCouchdb",
       suffix: "",
